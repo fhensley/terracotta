@@ -1,0 +1,15 @@
+---
+name: terracotta_gateway_ng
+
+packages:
+- common
+- terracotta
+- terracotta_gateway_ng
+_ ruby
+- sqlite
+- syslog_aggregator
+
+templates:
+  terracotta_gateway_ctl: bin/terracotta_gateway_ctl
+  terracotta_gateway.yml.erb: config/terracotta_gateway.yml.yml
+  syslog_forwarder.conf.erb: config/syslog_forwarder.conf

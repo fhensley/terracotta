@@ -1,0 +1,31 @@
+---
+name: terracotta_node_ng
+templates:
+  terracotta_migration_util.erb: bin/terracotta_migration_util
+  terracotta_node_ctl: bin/terracotta_node_ctl
+  terracotta_node.yml.erb: config/terracotta_node.yml
+  terracotta_worker.yml.erb: config/terracotta_worker.yml
+  terracotta_worker_ctl: bin/terracotta_worker_ctl
+  terracotta_backup.yml.erb: config/terracotta_backup.yml
+  terracotta_backup.cron.erb: config/terracotta_backup.cron
+  terracotta_backup.erb: config/terracotta_backup
+  terracotta_ctl.erb: bin/terracotta_ctl
+  syslog_forwarder.conf.erb: config/syslog_forwarder.conf
+  logrotate.conf.erb: config/logrotate.conf
+  terracotta_logrotate.cron.erb: config/terracotta_logrotate.cron
+  terracotta.conf.erb: config/terracotta.conf
+
+  warden_ctl.erb: bin/warden_ctl
+  warden.yml.erb: config/warden.yml
+  pre_service_start.sh: bin/pre_service_start.sh
+  warden_service_ctl: bin/warden_service_ctl
+  post_service_start.sh: bin/post_service_start.sh
+packages:
+  - common
+  - terracotta
+  - terracotta_node_ng
+  - ruby
+  - ruby_next
+  - sqlite
+  - syslog_aggregator
+  - rootfs_lucid64

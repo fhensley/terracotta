@@ -1,0 +1,2 @@
+<% freq_min=properties.terracotta_node && properties.terracotta_node.logrotate && properties.terracotta_node.logrotate.freq_min || 5 %>
+*/<%= freq_min %> * * * * test -x /usr/sbin/logrotate && /usr/sbin/logrotate /var/vcap/jobs/terracotta_node_ng/config/logrotate.conf >>/var/vcap/sys/log/terracotta_node/terracotta_logrotate_cron.log 2>&1

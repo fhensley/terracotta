@@ -1,0 +1,5 @@
+check process terracotta_gateway
+  with pidfile /var/vcap/sys/run/terracotta_gateway_ng/terracotta_gateway.pid
+  start program "/var/vcap/jobs/terracotta_gateway_ng/bin/terracotta_gateway_ctl start"
+  stop program "/var/vcap/jobs/terracotta_gateway_ng/bin/terracotta_gateway_ctl stop"
+  group vcap

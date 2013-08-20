@@ -1,0 +1,9 @@
+---
+name: terracotta_gateway_ng
+dependencies:
+- terracotta
+- sqlite
+- ruby
+files:
+- services/ng/terracotta/**/*
+- pkg_utils/*

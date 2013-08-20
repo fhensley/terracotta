@@ -1,0 +1,66 @@
+#!/bin/bash
+<%
+service = "terracotta"
+plan = properties.terracotta_node.plan
+plan_conf = properties.service_plans.send(service.to_sym).send(plan.to_sym).configuration
+%>
+STOP_TIMEOUT=<%= properties.terracotta_node.instance_stop_timeout || 3 %>
+OP=$1
+BASE_DIR=$2
+LOG_DIR=$3
+COMMON_DIR=$4
+PIDFILE=$BASE_DIR/service.pid
+
+source $COMMON_DIR/bin/utils.sh
+
+FIRST_TIME=0
+
+case $OP in
+  start)
+    BIN_DIR=$5
+
+    if [ -z "$PASSWD" ]; then
+      echo "ERROR: require password"
+      exit 1
+    fi
+
+    echo `date` >> $LOG_DIR/terracotta_ctl.log
+
+    if [ ! -d $BASE_DIR -o ! -f $BASE_DIR/terracotta.xml ]; then
+      FIRST_TIME=1
+      mkdir -p $BASE_DIR
+      chown vcap:vcap $BASE_DIR
+    fi
+
+    chown -R vcap:vcap $BASE_DIR
+    chmod -R 700 $BASE_DIR
+
+    # since terracotta service is alive
+    # log dir change should cover both clean deploy and upgrade push
+    if [ ! -d $LOG_DIR ]; then
+      mkdir -p $LOG_DIR
+      chown vcap:vcap $LOG_DIR
+    fi
+    sed -i "s&^[\w|#]*log_directory = .*&log_directory = '${LOG_DIR}'&" $BASE_DIR/terracotta.xml
+
+    echo "Starting Terracotta `cat $BASE_DIR/TERRACOTTA_VERSION`: " >> $LOG_DIR/terracotta_ctl.log
+    LD_LIBRARY_PATH=$BIN_DIR/lib:$LD_LIBRARY_PATH $BIN_DIR/bin/start-tc-server.sh -f $BASE_DIR/terracotta.xml
+
+    ;;
+
+  stop)
+    BIN_DIR=$5
+    LD_LIBRARY_PATH=$BIN_DIR/lib:$LD_LIBRARY_PATH $BIN_DIR/bin/stop-tc-server.sh -f $BASE_DIR/terracotta.xml
+    wait_pidfile $PIDFILE 0 $STOP_TIMEOUT
+    ;;
+
+  status)
+    BIN_DIR=$5
+    LD_LIBRARY_PATH=$BIN_DIR/lib:$LD_LIBRARY_PATH $BIN_DIR/bin/server-stat.sh -f $BASE_DIR/terracotta.xml > /dev/null
+    ;;
+
+  *)
+    echo "Usage: $0 {start|stop|status}"
+    ;;
+
+esac

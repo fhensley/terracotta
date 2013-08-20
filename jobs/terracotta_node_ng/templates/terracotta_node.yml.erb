@@ -1,0 +1,81 @@
+---
+<%
+service = "terracotta"
+plan = properties.terracotta_node.plan
+plan_conf = properties.service_plans.send(service.to_sym).send(plan.to_sym).configuration
+node = properties.terracotta_node
+supported_versions = node.supported_versions
+default_version = node.default_version
+warden = plan_conf.warden
+use_warden = warden && warden.enable
+version_configs = {
+  '3.7.5' => {
+    'binary_dir'  => '/var/vcap/packages/terracotta',
+  }
+}
+nats_props_name = properties.nats_props || "nats"
+nats_props = properties.send(nats_props_name)
+nats = "nats://#{nats_props.user}:#{nats_props.password}@#{nats_props.address}:#{nats_props.port}"
+%>
+capacity: <%= plan_conf.capacity || 200 %>
+plan: '<%= plan %>'
+local_db: sqlite3:/var/vcap/store/terracotta_node.db
+<%
+if use_warden
+%>
+base_dir: /var/vcap/store/terracotta_data
+<%else%>
+base_dir: /var/vcap/store/terracotta
+<%end%>
+mbus: <%= nats %>
+index: <%= spec.index %>
+logging:
+  level: debug
+  file: /var/vcap/sys/log/terracotta_node/terracotta_node.log
+  <% if properties.syslog_aggregator %>
+  syslog: vcap.terracotta_node
+  <% end %>
+pid: /var/vcap/sys/run/terracotta_node/terracotta_node.pid
+node_id: <%= "#{service}_node_#{plan}_#{spec.index}" %>
+supported_versions: <%= "['#{supported_versions.join("' , '")}']" %>
+default_version: <%= "'#{default_version}'"%>
+
+<% if node.ip_route %>
+ip_route: <%= node.ip_route %>
+<% end %>
+migration_nfs: <%= properties.service_migration && properties.service_migration.mount_point ? properties.service_migration.mount_point : "/var/vcap/services_migration" %>
+z_interval: <%= node.z_interval || 30 %>
+max_nats_payload: <%= nats_props.max_payload || 1048576 %>
+fqdn_hosts: <%= properties.services && properties.services.fqdn_hosts || "false" %>
+op_time_limit: <%= node.op_time_limit || 6 %>
+<%if use_warden %>
+max_disk: <%= plan_conf.max_disk || 128 %>
+use_warden: true
+warden:
+  service_log_dir: /var/vcap/sys/service-log/terracotta
+  service_bin_dir:
+  <% for version in supported_versions %>
+    '<%= version %>': <%= "#{version_configs[version]['binary_dir']}" %>
+  <% end %>
+  service_common_dir: /var/vcap/store/terracotta_common
+  image_dir: /var/vcap/store/terracotta_image
+  service_start_timeout: <%= warden.service_start_timeout || 3 %>
+  filesystem_quota: <%= warden.filesystem_quota || "false" %>
+<% if warden.clean_image_cache %>
+  clean_image_cache: true
+  clean_image_cache_interval: <%= warden.clean_image_cache_interval || 3 %>
+<% end %>
+  port_range:
+    first: 25001
+    last: 30000
+<%end%>
+m_interval: <%= node.m_interval || 10 %>
+<% if node.m_actions %>
+m_actions:
+<% node.m_actions.each do |act| %>
+  - <%= act %>
+<% end %>
+<% end %>
+warden_socket_path: <%= node.warden_socket_path || "/tmp/warden.sock" %>
+enable_xlog_enforcer: <%= !plan_conf.enable_xlog_enforcer.nil? && plan_conf.enable_xlog_enforcer.to_s || "true" %>
+xlog_enforce_tolerance: <%= plan_conf.xlog_enforce_tolerance || 5 %>

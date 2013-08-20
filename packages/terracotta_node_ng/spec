@@ -1,0 +1,11 @@
+---
+name: terracotta_node_ng
+dependencies:
+- terracotta
+- sqlite
+- ruby
+files:
+- services/ng/terracotta/**/*
+- services_warden/warden/**/*
+- pkg_utils/*
+- common/services/utils.sh

@@ -1,0 +1,35 @@
+#!/bin/bash
+export PATH=/var/vcap/packages/ruby/bin:$PATH
+
+INDEX=$2
+RUN_DIR=/var/vcap/sys/run/terracotta_node
+LOG_DIR=/var/vcap/sys/log/terracotta_node
+PIDFILE=$RUN_DIR/terracotta_worker_$INDEX.pid
+JOB_DIR=/var/vcap/jobs/terracotta_node_ng
+
+source /var/vcap/packages/common/utils.sh
+
+case $1 in
+
+  start)
+    pid_guard $PIDFILE "Terracotta worker"
+
+    mkdir -p $RUN_DIR
+    mkdir -p $LOG_DIR
+
+    export CLOUD_FOUNDRY_CONFIG_PATH=$JOB_DIR/config/
+    export PIDFILE=$PIDFILE
+
+    exec /var/vcap/packages/terracotta_node_ng/terracotta/bin/terracotta_worker \
+         >>$LOG_DIR/terracotta_worker_$INDEX.stdout.log \
+         2>>$LOG_DIR/terracotta_worker_$INDEX.stderr.log
+    ;;
+
+  stop)
+    kill_and_wait $PIDFILE
+    ;;
+
+  *)
+    echo "Usage: terracotta_worker_ctl {start|stop}"
+    ;;
+esac

@@ -1,0 +1,86 @@
+#!/bin/bash
+<%
+service = "terracotta"
+plan = properties.terracotta_node.plan
+plan_conf = properties.service_plans.send(service.to_sym).send(plan.to_sym).configuration
+abort unless properties.terracotta_node.password
+%>
+version=$1
+shift
+
+JOB_DIR=/var/vcap/jobs/terracotta_node_ng
+
+case "$version" in
+  "3.7.5")
+    PACKAGE_DIR=/var/vcap/packages/terracotta
+    DATA_DIR=/var/vcap/store/terracotta
+    RUN_DIR=/var/vcap/sys/run/terracotta
+    PIDFILE=$RUN_DIR/terracotta.pid
+    LOG_DIR=/var/vcap/sys/log/terracotta
+    SRC_CONF_FILE=$JOB_DIR/config/terracotta.xml
+
+    ;;
+esac
+
+FIRST_TIME=0
+
+source /var/vcap/packages/common/utils.sh
+
+case "$1" in
+  start)
+    pid_guard $PIDFILE "Terracotta"
+
+    mkdir -p $RUN_DIR
+    echo $$ > $PIDFILE # Satisfy Monit in case of slow start
+    <%if plan_conf && plan_conf.shmmax %>
+    sysctl -w 'kernel.shmmax=<%=plan_conf.shmmax%>'
+    <%else%>
+    sysctl -w 'kernel.shmmax=284934144'
+    <%end%>
+
+    <%if plan_conf && plan_conf.shmall%>
+    sysctl -w 'kernel.shmall=<%=plan_conf.shmall%>'
+    <%else%>
+    sysctl -w 'kernel.shmall=2097152'
+    <%end%>
+
+    if [ ! -d $DATA_DIR -o ! -f $DATA_DIR/terracotta.xml ]; then
+      FIRST_TIME=1
+      mkdir -p $DATA_DIR
+      chown vcap:vcap $DATA_DIR
+    fi
+
+    # update the config file in data directory
+    rsync -arl $SRC_CONF_FILE $DATA_DIR/terracotta.xml
+
+    # since terracotta service is alive
+    # log dir change should cover both clean deploy and upgrade push
+    if [ ! -d $LOG_DIR ]; then
+      mkdir -p $LOG_DIR
+      chown vcap:vcap $LOG_DIR
+    fi
+
+    echo "Starting Terracotta $version: "
+    su - vcap -c "LD_LIBRARY_PATH=$PACKAGE_DIR/lib:$LD_LIBRARY_PATH $PACKAGE_DIR/bin/start-tc-server.sh -f $DATA_DIR/terracotta.xml"
+
+    ;;
+
+  stop)
+    echo "Stopping Terracotta $version: "
+    su - vcap -c "LD_LIBRARY_PATH=$PACKAGE_DIR/lib:$LD_LIBRARY_PATH $PACKAGE_DIR/bin/stop-tc-server.sh -f $DATA_DIR/terracotta.xml"
+    wait_pidfile $PIDFILE
+
+    ;;
+
+  status)
+    su - vcap -c "LD_LIBRARY_PATH=$PACKAGE_DIR/lib:$LD_LIBRARY_PATH $PACKAGE_DIR/bin/server-stat.sh -f $DATA_DIR/terracotta.xml"
+
+    ;;
+
+  *)
+    echo "Usage: $0 {start|stop|status}"
+    exit 1
+
+    ;;
+
+esac
